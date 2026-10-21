@@ -5,7 +5,7 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 const modal = document.getElementById("visualisation-modal");
 const canvasContainer = document.getElementById("visualisation-canvas");
-const openButton = document.getElementById("open-visualisation");
+const openButtons = document.querySelectorAll(".visualisation-open");
 const closeButton = document.getElementById("close-visualisation");
 const preview = document.getElementById("visualisation-preview");
 const previewTitle = document.getElementById("visualisation-preview-title");
@@ -13,7 +13,7 @@ const previewText = document.getElementById("visualisation-preview-text");
 const previewLink = document.getElementById("visualisation-preview-link");
 const articleData = JSON.parse(document.getElementById("visualisation-articles").textContent);
 
-if (modal && canvasContainer && openButton && closeButton && articleData.length > 0) {
+if (modal && canvasContainer && openButtons.length > 0 && closeButton && articleData.length > 0) {
     let scene;
     let camera;
     let renderer;
@@ -214,6 +214,7 @@ if (modal && canvasContainer && openButton && closeButton && articleData.length 
         scene.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xf0eeea, size: 0.15 })));
 
         articleObjects = articleData.map(createArticleObject);
+        preloadCustomModels();
 
         for (let index = 0; index < 18; index++) createMeteor(index);
 
@@ -221,6 +222,12 @@ if (modal && canvasContainer && openButton && closeButton && articleData.length 
         renderer.domElement.addEventListener("click", handleClick);
         window.addEventListener("resize", resize);
         animate();
+    }
+
+    function preloadCustomModels() {
+        articleData.forEach((article, index) => {
+            if (article.modelUrl) loadCustomModel(index);
+        });
     }
 
     function loadCustomModel(index) {
@@ -263,26 +270,33 @@ if (modal && canvasContainer && openButton && closeButton && articleData.length 
     function showPreview(article) {
         activeArticle = article;
         const articleIndex = articleData.findIndex((item) => item.id === article.id);
-        loadCustomModel(articleIndex);
+        if (!loadedModels.has(articleIndex)) {
+            preloadCustomModels();
+        }
         previewTitle.textContent = article.title;
         previewText.textContent = article.excerpt;
         previewLink.href = article.url;
         preview.classList.add("is-visible");
     }
 
-    function handlePointerMove(event) {
+    function getArticleAtPointer(event) {
         const bounds = renderer.domElement.getBoundingClientRect();
         pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
         pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
         raycaster.setFromCamera(pointer, camera);
-        const hit = raycaster.intersectObjects(articleObjects, true)[0];
+        return raycaster.intersectObjects(articleObjects, true)[0];
+    }
+
+    function handlePointerMove(event) {
+        const hit = getArticleAtPointer(event);
         renderer.domElement.style.cursor = hit ? "pointer" : "grab";
         if (hit) showPreview(hit.object.userData.article);
     }
 
-    function handleClick() {
-        if (activeArticle && preview.classList.contains("is-visible")) {
-            showPreview(activeArticle);
+    function handleClick(event) {
+        const hit = getArticleAtPointer(event);
+        if (hit?.object.userData.article) {
+            showPreview(hit.object.userData.article);
         }
     }
 
@@ -329,7 +343,11 @@ if (modal && canvasContainer && openButton && closeButton && articleData.length 
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
-        if (!renderer) createScene();
+        if (!renderer) {
+            createScene();
+        } else {
+            preloadCustomModels();
+        }
     }
 
     function closeExperience() {
@@ -338,7 +356,7 @@ if (modal && canvasContainer && openButton && closeButton && articleData.length 
         document.body.style.overflow = "";
     }
 
-    openButton.addEventListener("click", openExperience);
+    openButtons.forEach((button) => button.addEventListener("click", openExperience));
     closeButton.addEventListener("click", closeExperience);
     document.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && modal.classList.contains("is-open")) closeExperience();

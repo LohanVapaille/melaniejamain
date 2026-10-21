@@ -219,7 +219,7 @@
                         <li><a href="{{ url('/') }}#apropos">{{ $en ? 'About' : 'À propos' }}</a></li>
                         <li><a href="{{ url('/') }}#articles">Articles</a></li>
                         <li><a href="{{ url('/') }}#contact">Contact</a></li>
-                        <button class="visualisation-trigger only-phone " id="open-visualisation" type="button">
+                        <button class="visualisation-trigger visualisation-open only-phone" type="button">
                             <span aria-hidden="true">✦</span>
                             {{ $en ? '3D experience' : 'Visualisation 3D' }}
                         </button>
@@ -231,7 +231,7 @@
                         <a href="{{ route('language.switch', 'en') }}"
                             class="{{ session('lang', 'fr') === 'en' ? 'active' : '' }}">EN</a>
                     </div>
-                    <button class="visualisation-trigger only-desktop" id="open-visualisation" type="button">
+                    <button class="visualisation-trigger visualisation-open only-desktop" type="button">
                         <span aria-hidden="true">✦</span>
                         {{ $en ? '3D experience' : 'Visualisation 3D' }}
                     </button>
@@ -255,12 +255,12 @@
             <div class="visualisation-heading">
                 <span class="section-label">{{ $en ? 'Article space' : 'Espace des articles' }}</span>
                 <h2>{{ $en ? 'Wander among the articles' : 'Promenez-vous parmi les articles' }}</h2>
-                <p>{{ $en ? 'Drag to look around, scroll to move, and click a planet to explore its articles.' : 'Glissez pour regarder, utilisez la molette pour avancer et cliquez sur une planète pour découvrir son article' }}
+                <p>{{ $en ? 'Drag to look around, scroll to move, and click a planet to explore its articles.' : 'Glissez pour regarder, utilisez la molette ou vos doigts pour avancer et cliquez sur une planète pour découvrir son article' }}
                 </p>
             </div>
             <button class="visualisation-close" id="close-visualisation" type="button"
                 aria-label="{{ $en ? 'Close 3D experience' : 'Fermer la visualisation 3D' }}">×</button>
-            <div class="visualisation-help">
+            <div class="visualisation-help only-desktop" id="visualisation-help">
                 {{ $en ? 'Drag · Scroll · Click a planet' : 'Glisser · Molette · Cliquer sur une planète' }}
             </div>
             <aside class="visualisation-preview" id="visualisation-preview" aria-live="polite">
