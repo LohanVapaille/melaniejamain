@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c97a"/>
+      <stop offset="50%" stop-color="#c9a84c"/>
+      <stop offset="100%" stop-color="#a8853a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Colonne centrale -->
+  <rect x="197.5" y="130" width="5" height="130" fill="url(#gold)" rx="2.5"/>
+
+  <!-- Pied -->
+  <rect x="165" y="258" width="70" height="6" fill="url(#gold)" rx="3"/>
+  <rect x="182" y="264" width="36" height="5" fill="url(#gold)" rx="2.5"/>
+
+  <!-- Barre horizontale -->
+  <rect x="90" y="148" width="220" height="4.5" fill="url(#gold)" rx="2.25"/>
+
+  <!-- Chaînes gauche -->
+  <line x1="115" y1="152" x2="108" y2="195" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="108" y1="195" x2="88" y2="205" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="128" y1="152" x2="128" y2="195" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="128" y1="195" x2="148" y2="205" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Plateau gauche -->
+  <path d="M80 205 Q118 220 156 205" stroke="url(#gold)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Chaînes droite -->
+  <line x1="272" y1="152" x2="272" y2="195" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="272" y1="195" x2="252" y2="205" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="285" y1="152" x2="292" y2="195" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="292" y1="195" x2="312" y2="205" stroke="url(#gold)" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Plateau droit -->
+  <path d="M244 205 Q282 220 320 205" stroke="url(#gold)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Étoile plateau gauche -->
+  <g transform="translate(118, 188)" filter="url(#glow)">
+    <polygon points="0,-18 4.2,-5.8 17,-5.8 7,2.2 11,15 0,7 -11,15 -7,2.2 -17,-5.8 -4.2,-5.8"
+      fill="url(#gold)" opacity="0.95"/>
+  </g>
+
+  <!-- Étoile plateau droit -->
+  <g transform="translate(282, 188)" filter="url(#glow)">
+    <polygon points="0,-18 4.2,-5.8 17,-5.8 7,2.2 11,15 0,7 -11,15 -7,2.2 -17,-5.8 -4.2,-5.8"
+      fill="url(#gold)" opacity="0.95"/>
+  </g>
+
+  <!-- Étoile sommet -->
+  <g transform="translate(200, 126)" filter="url(#glow)">
+    <polygon points="0,-10 2.4,-3.3 9.5,-3.3 4,1.2 6.2,8.5 0,4 -6.2,8.5 -4,1.2 -9.5,-3.3 -2.4,-3.3"
+      fill="url(#gold)" opacity="0.9"/>
+  </g>
+
+</svg>
