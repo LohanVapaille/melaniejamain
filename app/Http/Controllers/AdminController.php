@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -34,6 +35,10 @@ class AdminController extends Controller
         $articleToEdit = null;
         if ($request->has('edit')) {
             $articleToEdit = DB::table('articles')->where('id', $request->query('edit'))->first();
+            // Taille du modèle .glb actuel, affichée dans le formulaire
+            if ($articleToEdit?->model_3d_path && Storage::disk('public')->exists($articleToEdit->model_3d_path)) {
+                $articleToEdit->model_3d_size = Storage::disk('public')->size($articleToEdit->model_3d_path);
+            }
         }
 
         // 3. LIGNE À AJOUTER : Récupère les infos globales du site

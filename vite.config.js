@@ -10,6 +10,7 @@ export default defineConfig({
                 "resources/js/stars.js",
                 "resources/js/voirplus.js",
                 "resources/js/visualisation3d.js",
+                "resources/js/admin3dpreview.js",
             ], // <-- Change .css en .scss ici
             refresh: true,
         }),

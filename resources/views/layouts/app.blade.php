@@ -19,6 +19,7 @@
             'url' => route('articles.show', $article->id),
             'upcoming' => (int) $article->is_published === 2,
             'visualModel' => $article->visual_model ?? 'planet',
+            'visualColor' => $article->visual_color ?? null,
             'modelUrl' => !empty($article->model_3d_path) ? asset('storage/' . $article->model_3d_path) : null,
         ];
     })->values()->all();
@@ -252,10 +253,14 @@
         <div class="visualisation-canvas-wrap">
             <div id="visualisation-canvas"
                 aria-label="{{ $en ? 'Interactive article space' : 'Espace interactif des articles' }}"></div>
+            <div class="visualisation-loader" role="status">
+                <span class="visualisation-loader-orbit"></span>
+                <span>{{ $en ? 'Preparing the universe…' : 'Préparation de l’univers…' }}</span>
+            </div>
             <div class="visualisation-heading">
                 <span class="section-label">{{ $en ? 'Article space' : 'Espace des articles' }}</span>
                 <h2>{{ $en ? 'Wander among the articles' : 'Promenez-vous parmi les articles' }}</h2>
-                <p>{{ $en ? 'Drag to look around, scroll to move, and click a planet to explore its articles.' : 'Glissez pour regarder, utilisez la molette ou vos doigts pour avancer et cliquez sur une planète pour découvrir son article' }}
+                <p>{{ $en ? 'Drag to look around, scroll to move, and click a celestial body to explore its article.' : 'Glissez pour regarder, utilisez la molette ou vos doigts pour avancer et cliquez sur une planète pour découvrir son article' }}
                 </p>
             </div>
             <button class="visualisation-close" id="close-visualisation" type="button"

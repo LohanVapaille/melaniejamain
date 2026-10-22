@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ArticleController extends Controller
 {
+    public const VISUAL_MODELS = ['planet', 'gas_giant', 'moon', 'meteor', 'satellite', 'station', 'star'];
+
     /**
      * Afficher le détail d'un article unique
      */
@@ -34,19 +36,32 @@ class ArticleController extends Controller
             'contenu' => 'required',
             'nom_anglais' => 'nullable|max:255',
             'contenu_anglais' => 'nullable',
-            'visual_model' => 'required|in:planet,moon,meteor,satellite,star',
-            'model_3d' => 'nullable|file|mimes:glb|max:71680',
+            'visual_model' => 'required|in:'.implode(',', self::VISUAL_MODELS),
+            'visual_color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            // 15 Mo maximum : au-delà, le modèle met trop longtemps à s'afficher.
+            'model_3d' => 'nullable|file|extensions:glb|max:15360',
+        ], [
+            'model_3d.max' => 'Le modèle 3D ne doit pas dépasser 15 Mo. Compressez-le d’abord (gltf.report ou gltf-transform).',
+            'model_3d.extensions' => 'Le modèle 3D doit être un fichier .glb.',
         ]);
 
         $id = $request->input('id');
         // Récupère le statut (1 pour publié, 0 pour brouillon)
         $isPublished = (int) $request->input('is_published', 1);
-        $modelPath = $request->input('existing_model_3d_path');
+        $currentModelPath = $id ? DB::table('articles')->where('id', $id)->value('model_3d_path') : null;
+        $modelPath = $currentModelPath;
         if ($request->hasFile('model_3d')) {
             $modelPath = $request->file('model_3d')->store('models/articles', 'public');
+        } elseif ($request->boolean('remove_model_3d')) {
+            $modelPath = null;
+        }
+        // L'ancien fichier n'est plus utilisé : on libère l'espace disque.
+        if ($currentModelPath && $currentModelPath !== $modelPath) {
+            Storage::disk('public')->delete($currentModelPath);
         }
 
         $visualModel = $request->input('visual_model', 'planet');
+        $visualColor = $request->input('visual_color') ?: null;
 
         if ($id) {
             // MODE ÉDITION
@@ -57,6 +72,7 @@ class ArticleController extends Controller
                 'contenu_anglais' => $request->input('contenu_anglais'),
                 'is_published' => $isPublished, // <-- LIGNE AJOUTÉE
                 'visual_model' => $visualModel,
+                'visual_color' => $visualColor,
                 'model_3d_path' => $modelPath,
                 'updated_at' => now(),
             ]);
@@ -70,6 +86,7 @@ class ArticleController extends Controller
                 'contenu_anglais' => $request->input('contenu_anglais'),
                 'is_published' => $isPublished, // <-- LIGNE AJOUTÉE
                 'visual_model' => $visualModel,
+                'visual_color' => $visualColor,
                 'model_3d_path' => $modelPath,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -82,7 +99,11 @@ class ArticleController extends Controller
 
     public function delete($id)
     {
-        // Supprime l'article ciblé
+        // Supprime l'article ciblé et son éventuel modèle 3D
+        $modelPath = DB::table('articles')->where('id', $id)->value('model_3d_path');
+        if ($modelPath) {
+            Storage::disk('public')->delete($modelPath);
+        }
         DB::table('articles')->where('id', $id)->delete();
 
         return redirect()->route('admin.dashboard')->with('success', 'L’article a bien été supprimé.');

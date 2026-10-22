@@ -45,7 +45,6 @@
                     @csrf
 
                     <input type="hidden" id="article_id" name="id" value="{{ $articleToEdit ? $articleToEdit->id : '' }}">
-                    <input type="hidden" name="existing_model_3d_path" value="{{ old('existing_model_3d_path', $articleToEdit?->model_3d_path) }}">
 
                     <div style="margin-bottom: 20px;">
                         <label for="nom"
@@ -58,36 +57,73 @@
                         @error('nom') <span style="color: #f56565; font-size: 0.85rem;">{{ $message }}</span> @enderror
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-                        <div>
-                            <label for="visual_model"
-                                style="display: block; font-weight: 500; margin-bottom: 8px; color: var(--gold, #d4af37);">
-                                Modèle 3D de l’article
-                            </label>
-                            <select id="visual_model" name="visual_model"
-                                style="width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid #4a5568; color: #fff; border-radius: 4px; font-size: 1rem;">
-                                @php($selectedVisualModel = old('visual_model', $articleToEdit?->visual_model ?? 'planet'))
-                                <option value="planet" {{ $selectedVisualModel === 'planet' ? 'selected' : '' }}>Planète</option>
-                                <option value="moon" {{ $selectedVisualModel === 'moon' ? 'selected' : '' }}>Lune</option>
-                                <option value="meteor" {{ $selectedVisualModel === 'meteor' ? 'selected' : '' }}>Météorite</option>
-                                <option value="satellite" {{ $selectedVisualModel === 'satellite' ? 'selected' : '' }}>Satellite artificiel</option>
-                                <option value="star" {{ $selectedVisualModel === 'star' ? 'selected' : '' }}>Étoile brillante</option>
-                            </select>
+                    @php
+                        $selectedVisualModel = old('visual_model', $articleToEdit?->visual_model ?? 'planet');
+                        $selectedVisualColor = old('visual_color', $articleToEdit?->visual_color ?? '');
+                        $visualModels = [
+                            'planet' => ['🌍', 'Planète'],
+                            'gas_giant' => ['🪐', 'Géante gazeuse'],
+                            'moon' => ['🌕', 'Lune'],
+                            'meteor' => ['☄️', 'Astéroïde'],
+                            'satellite' => ['🛰️', 'Satellite'],
+                            'station' => ['🛸', 'Station spatiale'],
+                            'star' => ['⭐', 'Étoile brillante'],
+                        ];
+                        $colorPresets = ['#2f6fb5', '#2a8f9c', '#3a7d5a', '#d9a066', '#c0564b', '#7a4fc2', '#b9b4ab', '#ffd27a'];
+                        $modelSize = $articleToEdit?->model_3d_size ?? null;
+                        $modelIsHeavy = $modelSize && $modelSize > 5 * 1024 * 1024;
+                    @endphp
+                    <fieldset class="space-editor" data-article-id="{{ $articleToEdit?->id ?? 1 }}">
+                        <legend>Astre de l’article dans la visualisation 3D</legend>
+
+                        <div class="space-editor-grid">
+                            <div>
+                                <div class="space-type-list" role="radiogroup" aria-label="Type d’astre">
+                                    @foreach($visualModels as $value => [$icon, $label])
+                                        <label class="space-type">
+                                            <input type="radio" name="visual_model" value="{{ $value }}" {{ $selectedVisualModel === $value ? 'checked' : '' }}>
+                                            <span><b aria-hidden="true">{{ $icon }}</b>{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+
+                                <span class="space-editor-label">Couleur dominante</span>
+                                <input type="hidden" name="visual_color" id="visual_color" value="{{ $selectedVisualColor }}">
+                                <div class="space-colors">
+                                    <button type="button" class="space-color is-auto" data-color="" title="Automatique">Auto</button>
+                                    @foreach($colorPresets as $preset)
+                                        <button type="button" class="space-color" data-color="{{ $preset }}" style="--swatch: {{ $preset }}" title="{{ $preset }}"></button>
+                                    @endforeach
+                                    <label class="space-color is-custom" title="Couleur personnalisée">
+                                        <input type="color" id="visual_color_picker" value="{{ $selectedVisualColor ?: '#d4af37' }}">
+                                    </label>
+                                </div>
+                                @error('visual_color') <span class="space-error">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div class="space-preview">
+                                <div id="space-preview-canvas"></div>
+                                <small>Aperçu en direct · généré instantanément, aucun fichier à charger</small>
+                            </div>
                         </div>
-                        <div>
-                            <label for="model_3d"
-                                style="display: block; font-weight: 500; margin-bottom: 8px; color: var(--gold, #d4af37);">
-                                Remplacer par un modèle .glb
-                            </label>
-                            <input type="file" id="model_3d" name="model_3d" accept=".glb,model/gltf-binary"
-                                style="width: 100%; padding: 9px; background: rgba(0, 0, 0, 0.4); border: 1px solid #4a5568; color: #fff; border-radius: 4px;">
+
+                        <details class="space-advanced" {{ $articleToEdit?->model_3d_path || $errors->has('model_3d') ? 'open' : '' }}>
+                            <summary>Avancé : utiliser mon propre modèle .glb</summary>
+                            <p>Facultatif et déconseillé : les astres intégrés s’affichent instantanément. Si vous utilisez votre propre modèle, compressez-le d’abord sur <a href="https://gltf.report" target="_blank" rel="noopener">gltf.report</a> (Draco ou Meshopt). <strong>15 Mo maximum</strong>, idéalement moins de 3 Mo.</p>
+                            <input type="file" id="model_3d" name="model_3d" accept=".glb,model/gltf-binary" data-max-size="{{ 15 * 1024 * 1024 }}">
+                            <small id="model_3d_feedback" class="space-file-feedback"></small>
+                            @error('model_3d') <span class="space-error">{{ $message }}</span> @enderror
                             @if($articleToEdit?->model_3d_path)
-                                <small style="display: block; color: #a0aec0; margin-top: 6px;">Un modèle personnalisé est déjà associé.</small>
-                            @else
-                                <small style="display: block; color: #a0aec0; margin-top: 6px;">Facultatif, 70 Mo maximum.</small>
+                                <div class="space-current-model {{ $modelIsHeavy ? 'is-heavy' : '' }}">
+                                    Modèle personnalisé actuel{{ $modelSize ? ' : ' . number_format($modelSize / 1048576, 1, ',', ' ') . ' Mo' : '' }}
+                                    @if($modelIsHeavy)
+                                        — trop lourd, il ralentit l’ouverture de la visualisation.
+                                    @endif
+                                    <label><input type="checkbox" name="remove_model_3d" value="1" {{ $modelIsHeavy ? 'checked' : '' }}> Retirer ce modèle et utiliser l’astre intégré</label>
+                                </div>
                             @endif
-                        </div>
-                    </div>
+                        </details>
+                    </fieldset>
 
                     <div style="margin-bottom:20px;">
                         <label style="display:block;font-weight:500;margin-bottom:8px;color:var(--gold,#d4af37);">English title</label>
@@ -140,7 +176,43 @@
                     </div>
                 </form>
 
+                @vite(['resources/js/admin3dpreview.js'])
                 <style>
+                    .space-editor { margin: 0 0 20px; padding: 18px; border: 1px solid #4a5568; border-radius: 6px; background: rgba(0, 0, 0, 0.25); }
+                    .space-editor legend { padding: 0 8px; color: var(--gold, #d4af37); font-weight: 500; }
+                    .space-editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 18px; align-items: start; }
+                    .space-type-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 16px; }
+                    .space-type { position: relative; }
+                    .space-type input { position: absolute; opacity: 0; pointer-events: none; }
+                    .space-type span { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #4a5568; border-radius: 4px; background: rgba(0, 0, 0, 0.35); color: #e2e8f0; font-size: 0.85rem; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+                    .space-type span b { font-weight: normal; font-size: 1.1rem; }
+                    .space-type input:checked + span { border-color: var(--gold, #d4af37); background: rgba(212, 175, 55, 0.14); color: #fff; }
+                    .space-type input:focus-visible + span { outline: 2px solid var(--gold, #d4af37); outline-offset: 2px; }
+                    .space-editor-label { display: block; margin-bottom: 8px; color: #a0aec0; font-size: 0.85rem; }
+                    .space-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+                    .space-color { position: relative; width: 30px; height: 30px; padding: 0; border: 2px solid transparent; border-radius: 50%; background: var(--swatch, #333); cursor: pointer; box-shadow: 0 0 0 1px #4a5568; }
+                    .space-color.is-auto { width: auto; padding: 0 10px; border-radius: 15px; background: rgba(0, 0, 0, 0.4); color: #e2e8f0; font-size: 0.75rem; }
+                    .space-color.is-custom { overflow: hidden; background: conic-gradient(#f56565, #ecc94b, #48bb78, #4299e1, #9f7aea, #f56565); }
+                    .space-color.is-custom input { position: absolute; inset: -6px; width: 44px; height: 44px; opacity: 0; cursor: pointer; }
+                    .space-color.is-active { border-color: #fff; box-shadow: 0 0 0 2px var(--gold, #d4af37); }
+                    .space-preview { text-align: center; }
+                    #space-preview-canvas { width: 220px; height: 220px; border-radius: 6px; overflow: hidden; background: #02030f; }
+                    .space-preview small { display: block; margin-top: 6px; color: #a0aec0; font-size: 0.72rem; line-height: 1.4; }
+                    .space-advanced { margin-top: 16px; color: #a0aec0; font-size: 0.85rem; }
+                    .space-advanced summary { color: #e2e8f0; cursor: pointer; }
+                    .space-advanced p { line-height: 1.5; }
+                    .space-advanced a { color: #87cefa; }
+                    .space-advanced input[type="file"] { width: 100%; padding: 9px; background: rgba(0, 0, 0, 0.4); border: 1px solid #4a5568; color: #fff; border-radius: 4px; }
+                    .space-file-feedback { display: block; margin-top: 6px; }
+                    .space-file-feedback.is-error, .space-error { color: #f56565; font-size: 0.85rem; }
+                    .space-current-model { margin-top: 10px; padding: 10px; border: 1px solid #4a5568; border-radius: 4px; }
+                    .space-current-model.is-heavy { border-color: #ed8936; color: #fbd38d; }
+                    .space-current-model label { display: block; margin-top: 6px; color: #e2e8f0; cursor: pointer; }
+                    @media (max-width: 600px) {
+                        .space-editor-grid { grid-template-columns: 1fr; }
+                        #space-preview-canvas { width: 100%; }
+                    }
+
                     .ql-toolbar.ql-snow {
                         background: #1a202c !important;
                         border-color: #4a5568 !important;
