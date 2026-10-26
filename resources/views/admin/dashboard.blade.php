@@ -131,8 +131,8 @@
                     </div>
                     <div style="margin-bottom:20px;">
                         <label style="display:block;font-weight:500;margin-bottom:8px;color:var(--gold,#d4af37);">English article content (HTML supported)</label>
-                        <div id="editor-container-en" style="height:350px;background:rgba(0,0,0,.4);color:#fff;font-size:1rem;border-color:#4a5568;border-radius:0 0 4px 4px;">{!! old('contenu_anglais', $articleToEdit?->contenu_anglais) !!}</div>
-                        <input type="hidden" id="contenu_anglais" name="contenu_anglais">
+                        <div id="editor-container-en" style="height:350px;background:rgba(0,0,0,.4);color:#fff;font-size:1rem;border-color:#4a5568;border-radius:0 0 4px 4px;"></div>
+                        <textarea id="contenu_anglais" name="contenu_anglais" class="html-source" spellcheck="false" hidden>{{ old('contenu_anglais', $articleToEdit?->contenu_anglais) }}</textarea>
                     </div>
 
                     <div style="margin-bottom: 20px;">
@@ -144,10 +144,9 @@
 
                         <div id="editor-container"
                             style="height: 350px; background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 1rem; border-color: #4a5568; border-radius: 0 0 4px 4px;">
-                            {!! old('contenu', $articleToEdit ? $articleToEdit->contenu : '') !!}
                         </div>
 
-                        <input type="hidden" id="contenu" name="contenu">
+                        <textarea id="contenu" name="contenu" class="html-source" spellcheck="false" hidden>{{ old('contenu', $articleToEdit ? $articleToEdit->contenu : '') }}</textarea>
                         @error('contenu') <span style="color: #f56565; font-size: 0.85rem;">{{ $message }}</span> @enderror
                     </div>
 
@@ -234,36 +233,193 @@
                     .ql-container.ql-snow {
                         border-color: #4a5568 !important;
                     }
+
+                    .ql-snow .ql-picker-options {
+                        background: #1a202c !important;
+                        border-color: #4a5568 !important;
+                    }
+
+                    /* Tailles de police façon Word : le libellé affiche la valeur (ex. 12pt) */
+                    .ql-snow .ql-picker.ql-size {
+                        width: 70px;
+                    }
+
+                    .ql-snow .ql-picker.ql-size .ql-picker-label[data-value]::before,
+                    .ql-snow .ql-picker.ql-size .ql-picker-item[data-value]::before {
+                        content: attr(data-value);
+                    }
+
+                    .ql-snow .ql-picker.ql-size .ql-picker-options {
+                        max-height: 260px;
+                        overflow-y: auto;
+                    }
+
+                    .ql-toolbar button.ql-alinea,
+                    .ql-toolbar button.ql-html {
+                        width: auto;
+                        color: #a0aec0;
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                    }
+
+                    .ql-toolbar button.ql-alinea.ql-active,
+                    .ql-toolbar button.ql-html.ql-active {
+                        color: var(--gold, #d4af37);
+                    }
+
+                    /* En mode HTML, seuls les boutons de bascule restent utilisables */
+                    .ql-toolbar.is-html-mode > .ql-formats > :not(.ql-html) {
+                        opacity: 0.3;
+                        pointer-events: none;
+                    }
+
+                    .html-source {
+                        display: block;
+                        width: 100%;
+                        height: 350px;
+                        padding: 12px;
+                        box-sizing: border-box;
+                        background: rgba(0, 0, 0, 0.6);
+                        border: 1px solid #4a5568;
+                        border-top: none;
+                        border-radius: 0 0 4px 4px;
+                        color: #e2e8f0;
+                        font-family: Consolas, 'Courier New', monospace;
+                        font-size: 0.85rem;
+                        line-height: 1.5;
+                        resize: vertical;
+                    }
+
+                    .html-source[hidden] {
+                        display: none;
+                    }
                 </style>
 
                 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
                 <script>
                     document.addEventListener('DOMContentLoaded', function () {
-                        // Configuration de la barre d'outils (Gras, Italic, Titres, Liens, Listes)
+                        const Parchment = Quill.import('parchment');
+
+                        // Tailles de police en points, comme dans Word (écrites en style inline pour s'afficher partout)
+                        const FONT_SIZES = ['8pt', '9pt', '10pt', '11pt', '12pt', '14pt', '16pt', '18pt', '20pt', '24pt', '28pt', '32pt', '36pt', '48pt', '72pt'];
+                        const Size = Quill.import('attributors/style/size');
+                        Size.whitelist = FONT_SIZES;
+                        Quill.register(Size, true);
+
+                        // Alinéa : retrait de la première ligne du paragraphe
+                        const Alinea = new Parchment.StyleAttributor('alinea', 'text-indent', {
+                            scope: Parchment.Scope.BLOCK,
+                            whitelist: ['2em']
+                        });
+                        Quill.register(Alinea, true);
+
+                        // Configuration de la barre d'outils (Titres, Taille, Gras, Italic, Listes, Retraits, Liens, HTML)
                         const toolbarOptions = [
                             [{ 'header': [2, 3, false] }],
+                            [{ 'size': [false, ...FONT_SIZES] }],
                             ['bold', 'italic', 'underline', 'blockquote'],
                             [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                            ['link', 'clean'] // Liens hypertexte + bouton pour nettoyer le formatage
+                            ['alinea', { 'indent': '-1' }, { 'indent': '+1' }],
+                            ['link', 'clean'], // Liens hypertexte + bouton pour nettoyer le formatage
+                            ['html'] // Bascule vers l'édition du code HTML
                         ];
 
-                        const quill = new Quill('#editor-container', {
-                            modules: { toolbar: toolbarOptions },
-                            theme: 'snow'
-                        });
-                        const quillEnglish = new Quill('#editor-container-en', {
-                            modules: { toolbar: toolbarOptions },
-                            theme: 'snow'
-                        });
+                        // Ce que l'éditeur visuel sait représenter ; au-delà, on reste en mode HTML pour ne rien perdre
+                        const VISUAL_TAGS = new Set(['P', 'BR', 'H2', 'H3', 'STRONG', 'B', 'EM', 'I', 'U', 'S', 'A', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'SPAN']);
+                        const VISUAL_ATTRS = new Set(['href', 'target', 'rel', 'class', 'style', 'data-list']);
+                        const VISUAL_STYLES = new Set(['font-size', 'text-indent']);
 
-                        // Avant de soumettre le formulaire, on copie le HTML de Quill dans notre input caché
+                        function fitsVisualEditor(html) {
+                            const body = new DOMParser().parseFromString(html, 'text/html').body;
+                            return [...body.querySelectorAll('*')].every(el =>
+                                VISUAL_TAGS.has(el.tagName)
+                                && [...el.attributes].every(attr => VISUAL_ATTRS.has(attr.name))
+                                && [...el.style].every(prop => VISUAL_STYLES.has(prop))
+                                && [...el.classList].every(cls => cls.startsWith('ql-'))
+                            );
+                        }
+
+                        function setupEditor(containerSelector, source) {
+                            let htmlMode = false;
+
+                            const quill = new Quill(containerSelector, {
+                                modules: {
+                                    toolbar: {
+                                        container: toolbarOptions,
+                                        handlers: {
+                                            alinea() {
+                                                this.quill.format('alinea', this.quill.getFormat().alinea ? false : '2em', 'user');
+                                            },
+                                            html() {
+                                                setHtmlMode(!htmlMode);
+                                            }
+                                        }
+                                    }
+                                },
+                                theme: 'snow'
+                            });
+
+                            // Au rechargement, Quill ajoute une tabulation devant les paragraphes en retrait : l'alinéa suffit
+                            quill.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+                                const first = delta.ops[0];
+                                if (node.style.textIndent === '2em' && typeof first?.insert === 'string' && first.insert.startsWith('\t')) {
+                                    first.insert = first.insert.slice(1);
+                                    if (!first.insert) delta.ops.shift();
+                                }
+                                return delta;
+                            });
+
+                            const toolbar = quill.getModule('toolbar').container;
+                            const htmlButton = toolbar.querySelector('button.ql-html');
+                            htmlButton.textContent = '</>';
+                            htmlButton.title = 'Écrire / voir le code HTML';
+                            const alineaButton = toolbar.querySelector('button.ql-alinea');
+                            alineaButton.textContent = '¶→';
+                            alineaButton.title = 'Alinéa (retrait de première ligne)';
+
+                            // getSemanticHTML de Quill 2.0.2 remplace chaque espace par &nbsp;
+                            const visualHtml = () => quill.getSemanticHTML().replace(/&nbsp;/g, ' ');
+
+                            // fromVisual = false au chargement : le textarea contient déjà le HTML d'origine, Quill est encore vide
+                            function setHtmlMode(enabled, fromVisual = true) {
+                                if (enabled) {
+                                    if (fromVisual) source.value = visualHtml();
+                                } else {
+                                    if (!fitsVisualEditor(source.value)
+                                        && !confirm('Ce code contient des balises ou styles que l’éditeur visuel ne gère pas : ils seront perdus. Continuer ?')) {
+                                        return;
+                                    }
+                                    quill.clipboard.dangerouslyPasteHTML(source.value);
+                                }
+                                htmlMode = enabled;
+                                quill.container.hidden = enabled;
+                                source.hidden = !enabled;
+                                toolbar.classList.toggle('is-html-mode', enabled);
+                                htmlButton.classList.toggle('ql-active', enabled);
+                                (enabled ? source : quill).focus();
+                            }
+
+                            if (fitsVisualEditor(source.value)) {
+                                quill.clipboard.dangerouslyPasteHTML(source.value);
+                                quill.history.clear();
+                            } else {
+                                setHtmlMode(true, false);
+                            }
+
+                            // Avant l'envoi, on recopie le HTML de l'éditeur visuel dans le champ du formulaire
+                            return () => {
+                                if (!htmlMode) source.value = visualHtml();
+                            };
+                        }
+
+                        const syncEditors = [
+                            setupEditor('#editor-container', document.getElementById('contenu')),
+                            setupEditor('#editor-container-en', document.getElementById('contenu_anglais'))
+                        ];
+
                         const form = document.getElementById('article-form');
-                        form.addEventListener('submit', function (e) {
-                            const contenuInput = document.getElementById('contenu');
-                            const contenuEnglishInput = document.getElementById('contenu_anglais');
-                            // Récupère le code HTML pur généré par l'éditeur
-                            contenuInput.value = quill.getSemanticHTML();
-                            contenuEnglishInput.value = quillEnglish.getSemanticHTML();
+                        form.addEventListener('submit', function () {
+                            syncEditors.forEach(sync => sync());
                         });
                     });
                 </script>

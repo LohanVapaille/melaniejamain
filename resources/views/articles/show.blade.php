@@ -55,6 +55,16 @@
             font-family: inherit;
         }
 
+        /* Retraits de paragraphe ajoutés depuis l'éditeur (boutons ⇤ / ⇥) */
+        .ql-editor .ql-indent-1 { padding-left: 3em; }
+        .ql-editor .ql-indent-2 { padding-left: 6em; }
+        .ql-editor .ql-indent-3 { padding-left: 9em; }
+        .ql-editor .ql-indent-4 { padding-left: 12em; }
+        .ql-editor .ql-indent-5 { padding-left: 15em; }
+        .ql-editor .ql-indent-6 { padding-left: 18em; }
+        .ql-editor .ql-indent-7 { padding-left: 21em; }
+        .ql-editor .ql-indent-8 { padding-left: 24em; }
+
         /* Style des paragraphes */
         .ql-editor p {
             margin-bottom: 24px;
