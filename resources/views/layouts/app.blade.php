@@ -4,7 +4,7 @@
     $visualisationArticles = isset($articles)
         ? $articles
         : DB::table('articles')->whereIn('is_published', [1, 2])->orderBy('created_at', 'desc')->get();
-    $visualisationData = $visualisationArticles->map(function ($article) use ($en) {
+    $visualisationData = $visualisationArticles->reject(fn($article) => ($article->visual_model ?? null) === 'none')->map(function ($article) use ($en) {
         $title = $en ? ($article->nom_anglais ?: $article->nom) : $article->nom;
         $content = $en ? ($article->contenu_anglais ?: $article->contenu) : $article->contenu;
         $content = preg_replace('/<\s*br\s*\/?>|<\s*\/\s*(p|div|li|h[1-6])\s*>/i', ' ', $content);

@@ -103,7 +103,7 @@ class AdminController extends Controller
         $englishFields['updated_at'] = now();
         DB::table('infos')->where('langue', 'en')->update($englishFields);
 
-        return redirect()->route('admin.dashboard')->with('success', 'Les informations du site ont bien été mises à jour !');
+        return redirect()->to(route('admin.dashboard') . '#textes')->with('success', 'Les textes du site ont bien été mis à jour !');
     }
 
 

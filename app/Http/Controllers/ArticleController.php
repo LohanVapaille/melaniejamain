@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 class ArticleController extends Controller
 {
     public const VISUAL_MODELS = ['planet', 'gas_giant', 'moon', 'meteor', 'satellite', 'station', 'star'];
+    // L'article n'apparaît pas dans la visualisation 3D
+    public const NO_VISUAL = 'none';
 
     /**
      * Afficher le détail d'un article unique
@@ -31,16 +33,23 @@ class ArticleController extends Controller
 
     public function store(Request $request)
     {
+        // Un éditeur vide renvoie « <p></p> » : on le traite comme un contenu absent
+        $request->merge([
+            'contenu' => self::blankHtmlToNull($request->input('contenu')),
+            'contenu_anglais' => self::blankHtmlToNull($request->input('contenu_anglais')),
+        ]);
+
         $request->validate([
             'nom' => 'required|max:255',
             'contenu' => 'required',
             'nom_anglais' => 'nullable|max:255',
             'contenu_anglais' => 'nullable',
-            'visual_model' => 'required|in:'.implode(',', self::VISUAL_MODELS),
+            'visual_model' => 'required|in:'.implode(',', [...self::VISUAL_MODELS, self::NO_VISUAL]),
             'visual_color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             // 15 Mo maximum : au-delà, le modèle met trop longtemps à s'afficher.
             'model_3d' => 'nullable|file|extensions:glb|max:15360',
         ], [
+            'contenu.required' => 'Le contenu en français est obligatoire.',
             'model_3d.max' => 'Le modèle 3D ne doit pas dépasser 15 Mo. Compressez-le d’abord (gltf.report ou gltf-transform).',
             'model_3d.extensions' => 'Le modèle 3D doit être un fichier .glb.',
         ]);
@@ -79,7 +88,7 @@ class ArticleController extends Controller
             $message = 'L’article a bien été mis à jour !';
         } else {
             // MODE CRÉATION
-            DB::table('articles')->insert([
+            $id = DB::table('articles')->insertGetId([
                 'nom' => $request->input('nom'),
                 'contenu' => $request->input('contenu'),
                 'nom_anglais' => $request->input('nom_anglais'),
@@ -94,7 +103,15 @@ class ArticleController extends Controller
             $message = 'L’article a bien été enregistré !';
         }
 
-        return redirect()->route('admin.dashboard')->with('success', $message);
+        // On reste sur l'article qu'on vient d'enregistrer
+        return redirect()->to(route('admin.dashboard', ['edit' => $id]) . '#articles')->with('success', $message);
+    }
+
+    private static function blankHtmlToNull(?string $html): ?string
+    {
+        $text = html_entity_decode(strip_tags($html ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return preg_match('/\S/u', str_replace("\u{A0}", ' ', $text)) ? $html : null;
     }
 
     public function delete($id)

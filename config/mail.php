@@ -115,4 +115,7 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    // Adresse qui reçoit les messages du formulaire de contact du site.
+    'contact_to' => env('CONTACT_MAIL_TO'),
+
 ];

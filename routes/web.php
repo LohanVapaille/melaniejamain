@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AdminController; // <-- LIGNE AJOUTÉE ICI
+use App\Http\Controllers\ContactController;
 
 Route::get('/', function () {
     // MODIFICATION : On prend l'état 1 (publié) ET l'état 2 (à venir)
@@ -15,8 +16,13 @@ Route::get('/', function () {
     $lang = session('lang', 'fr');
     $info = DB::table('infos')->where('langue', $lang)->first() ?? DB::table('infos')->where('langue', 'fr')->first();
 
-    return view('welcome', compact('articles', 'info', 'lang'));
+    $captchaQuestion = ContactController::captchaQuestion($lang === 'en');
+
+    return view('welcome', compact('articles', 'info', 'lang', 'captchaQuestion'));
 });
+
+// Formulaire de contact : 6 envois maximum par tranche de 10 minutes et par visiteur
+Route::post('/contact', [ContactController::class, 'send'])->middleware('throttle:6,10')->name('contact.send');
 
 Route::get('/langue/{lang}', function ($lang) {
     abort_unless(in_array($lang, ['fr', 'en'], true), 404);
