@@ -108,6 +108,65 @@
             <p class="section-label">{{ $en ? 'Contact' : 'Contact' }}</p>
             <h2 class="section-title">{{ $text('section_contact_title') }}</h2>
             <p class="contact-intro">{{ $text('section_contact_text') }}</p>
+
+            <div class="contact-grid">
+            @php $contactErrors = $errors->getBag('contact'); @endphp
+            <form class="contact-form" id="contact-form" action="{{ route('contact.send') }}" method="POST" novalidate
+                data-msg-sending="{{ $en ? 'Sending…' : 'Envoi en cours…' }}"
+                data-msg-error="{{ $en ? 'Something went wrong. Please try again in a moment.' : 'Une erreur est survenue. Merci de réessayer dans un instant.' }}"
+                data-msg-throttle="{{ $en ? 'Too many messages sent. Please wait a few minutes before trying again.' : 'Trop de messages envoyés. Patientez quelques minutes avant de réessayer.' }}">
+                @csrf
+
+                <div class="contact-success" id="contact-success" role="status" tabindex="-1" @unless(session('contact_success')) hidden @endunless>
+                    <span class="contact-success-icon" aria-hidden="true">✓</span>
+                    <div>
+                        <p class="contact-success-title">{{ $en ? 'Message sent' : 'Message envoyé' }}</p>
+                        <p class="contact-success-text" id="contact-success-text">{{ session('contact_success') }}</p>
+                        <button type="button" class="contact-again" id="contact-again">{{ $en ? 'Send another message' : 'Envoyer un autre message' }}</button>
+                    </div>
+                </div>
+
+                <div class="contact-fields" id="contact-fields" @if(session('contact_success')) hidden @endif>
+                    <p class="contact-alert" id="contact-alert" role="alert" @unless($contactErrors->has('contact')) hidden @endunless>{{ $contactErrors->first('contact') }}</p>
+
+                    <div class="contact-field">
+                        <label for="contact-email">{{ $en ? 'Your email address' : 'Votre adresse e-mail' }}</label>
+                        <input type="email" id="contact-email" name="email" value="{{ old('email') }}" required maxlength="255" autocomplete="email" placeholder="{{ $en ? 'name@example.com' : 'nom@exemple.fr' }}">
+                        <span class="contact-error" data-error-for="email">{{ $contactErrors->first('email') }}</span>
+                    </div>
+
+                    <div class="contact-field">
+                        <label for="contact-subject">{{ $en ? 'Subject' : 'Objet' }}</label>
+                        <input type="text" id="contact-subject" name="subject" value="{{ old('subject') }}" required maxlength="150">
+                        <span class="contact-error" data-error-for="subject">{{ $contactErrors->first('subject') }}</span>
+                    </div>
+
+                    <div class="contact-field">
+                        <label for="contact-message">Message</label>
+                        <textarea id="contact-message" name="message" rows="6" required minlength="10" maxlength="5000">{{ old('message') }}</textarea>
+                        <span class="contact-error" data-error-for="message">{{ $contactErrors->first('message') }}</span>
+                    </div>
+
+                    {{-- Champ piège : invisible pour les humains, rempli par les robots --}}
+                    <div class="contact-trap" aria-hidden="true">
+                        <label for="contact-website">Website</label>
+                        <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
+                    </div>
+
+                    <div class="contact-captcha">
+                        <div class="contact-field">
+                            <label for="contact-captcha">
+                                {{ $en ? 'Anti-spam check:' : 'Vérification anti-spam :' }}
+                                <strong id="contact-captcha-question">{{ $captchaQuestion }}</strong>
+                            </label>
+                            <input type="text" id="contact-captcha" name="captcha" inputmode="numeric" pattern="[0-9]*" required autocomplete="off" maxlength="3">
+                            <span class="contact-error" data-error-for="captcha">{{ $contactErrors->first('captcha') }}</span>
+                        </div>
+                        <button type="submit" class="contact-submit" id="contact-submit">{{ $en ? 'Send message' : 'Envoyer le message' }}</button>
+                    </div>
+                </div>
+            </form>
+
             <div class="contact-links">
                 @if($info->mail)
                     <a href="mailto:{{ $info->mail }}" class="contact-link">
@@ -126,10 +185,89 @@
                     </a>
                 @endif
             </div>
+            </div>
         </section>
 
 
     </div>
+
+    <script>
+        // Envoi du formulaire de contact sans recharger la page, avec un retour immédiat
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('contact-form');
+            if (!form) return;
+
+            const fields = document.getElementById('contact-fields');
+            const success = document.getElementById('contact-success');
+            const successText = document.getElementById('contact-success-text');
+            const alertBox = document.getElementById('contact-alert');
+            const submit = document.getElementById('contact-submit');
+            const question = document.getElementById('contact-captcha-question');
+            const submitLabel = submit.textContent;
+
+            function showErrors(errors = {}) {
+                form.querySelectorAll('[data-error-for]').forEach(el => {
+                    const message = errors[el.dataset.errorFor]?.[0] || '';
+                    el.textContent = message;
+                    form.elements[el.dataset.errorFor]?.setAttribute('aria-invalid', message ? 'true' : 'false');
+                });
+                const firstInvalid = form.querySelector('[aria-invalid="true"]');
+                firstInvalid?.focus();
+            }
+
+            function showAlert(message) {
+                alertBox.textContent = message || '';
+                alertBox.hidden = !message;
+            }
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                showAlert('');
+                submit.disabled = true;
+                submit.textContent = form.dataset.msgSending;
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        body: new FormData(form),
+                    });
+
+                    if (response.status === 429) {
+                        showAlert(form.dataset.msgThrottle);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (data.captcha) question.textContent = data.captcha;
+                    form.elements.captcha.value = '';
+
+                    if (data.ok) {
+                        showErrors();
+                        form.reset();
+                        successText.textContent = data.message;
+                        fields.hidden = true;
+                        success.hidden = false;
+                        success.focus();
+                    } else {
+                        showErrors(data.errors);
+                        if (!Object.keys(data.errors || {}).length) showAlert(data.message);
+                    }
+                } catch (error) {
+                    showAlert(form.dataset.msgError);
+                } finally {
+                    submit.disabled = false;
+                    submit.textContent = submitLabel;
+                }
+            });
+
+            document.getElementById('contact-again').addEventListener('click', () => {
+                success.hidden = true;
+                fields.hidden = false;
+                form.elements.email.focus();
+            });
+        });
+    </script>
 
 
 @endsection
