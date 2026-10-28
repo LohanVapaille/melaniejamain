@@ -31,6 +31,7 @@
             'satellite' => ['🛰️', 'Satellite'],
             'station' => ['🛸', 'Station spatiale'],
             'star' => ['⭐', 'Étoile brillante'],
+            'none' => ['🚫', 'Sans objet 3D'],
         ];
         $colorPresets = ['#2f6fb5', '#2a8f9c', '#3a7d5a', '#d9a066', '#c0564b', '#7a4fc2', '#b9b4ab', '#ffd27a'];
         $modelSize = $articleToEdit?->model_3d_size ?? null;
@@ -244,7 +245,7 @@
                     </div>
 
                     {{-- 2. Astre 3D --}}
-                    <fieldset class="adm-card space-editor" data-article-id="{{ $articleToEdit?->id ?? 1 }}">
+                    <fieldset class="adm-card space-editor {{ $selectedVisualModel === 'none' ? 'is-none' : '' }}" data-article-id="{{ $articleToEdit?->id ?? 1 }}">
                         <legend class="adm-card-title"><span class="adm-step">2</span> Astre dans la visualisation 3D</legend>
 
                         <div class="space-editor-grid">
@@ -259,6 +260,9 @@
                                     @endforeach
                                 </div>
 
+                                <p class="space-none-note">Cet article ne sera pas affiché dans la visualisation 3D, mais reste visible normalement sur le site.</p>
+
+                                <div class="space-color-block">
                                 <span class="space-editor-label">Couleur dominante</span>
                                 <input type="hidden" name="visual_color" id="visual_color" value="{{ $selectedVisualColor }}">
                                 <div class="space-colors">
@@ -271,6 +275,7 @@
                                     </label>
                                 </div>
                                 @error('visual_color') <span class="adm-error">{{ $message }}</span> @enderror
+                                </div>
                             </div>
 
                             <div class="space-preview">
@@ -597,6 +602,12 @@
         .space-advanced a { color: var(--adm-info); }
         .space-advanced input[type="file"] { width: 100%; padding: 9px; background: rgba(0, 0, 0, 0.4); border: 1px solid #4a5568; color: #fff; border-radius: 4px; }
         .space-file-feedback { display: block; margin-top: 6px; }
+        .space-none-note { display: none; margin: 0; color: var(--adm-muted); font-size: 0.85rem; line-height: 1.5; }
+        .space-editor.is-none .space-none-note { display: block; }
+        .space-editor.is-none .space-color-block,
+        .space-editor.is-none .space-preview,
+        .space-editor.is-none .space-advanced { display: none; }
+        .space-editor.is-none .space-editor-grid { grid-template-columns: minmax(0, 1fr); }
         .space-file-feedback.is-error { color: var(--adm-danger); font-size: 0.85rem; }
         .space-current-model { margin-top: 10px; padding: 10px; border: 1px solid #4a5568; border-radius: 4px; }
         .space-current-model.is-heavy { border-color: #ed8936; color: #fbd38d; }

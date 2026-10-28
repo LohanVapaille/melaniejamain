@@ -76,7 +76,9 @@ if (editor && colorInput) {
             if (object) {
                 scene.remove(object);
                 disposeSpaceObject(object);
+                object = null;
             }
+            if (selectedType() === "none") return;
             object = createSpaceObject(renderer, { type: selectedType(), seed, color: colorInput.value || null, quality: { textureSize: 512 } });
             scene.add(object);
             const radius = object.userData.radius;
@@ -89,6 +91,7 @@ if (editor && colorInput) {
             const delta = Math.min(clock.getDelta(), 0.1);
             if (!visible) return;
             requestAnimationFrame(frame);
+            if (!object) return;
             time += delta;
             object.userData.update?.(time, delta);
             object.rotation.y += delta * 0.2;
@@ -111,6 +114,7 @@ if (editor && colorInput) {
     }
 
     const refresh = () => {
+        editor.classList.toggle("is-none", selectedType() === "none");
         highlightColor();
         preview?.then((instance) => instance.rebuild());
     };

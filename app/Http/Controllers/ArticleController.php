@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 class ArticleController extends Controller
 {
     public const VISUAL_MODELS = ['planet', 'gas_giant', 'moon', 'meteor', 'satellite', 'station', 'star'];
+    // L'article n'apparaît pas dans la visualisation 3D
+    public const NO_VISUAL = 'none';
 
     /**
      * Afficher le détail d'un article unique
@@ -42,7 +44,7 @@ class ArticleController extends Controller
             'contenu' => 'required',
             'nom_anglais' => 'nullable|max:255',
             'contenu_anglais' => 'nullable',
-            'visual_model' => 'required|in:'.implode(',', self::VISUAL_MODELS),
+            'visual_model' => 'required|in:'.implode(',', [...self::VISUAL_MODELS, self::NO_VISUAL]),
             'visual_color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             // 15 Mo maximum : au-delà, le modèle met trop longtemps à s'afficher.
             'model_3d' => 'nullable|file|extensions:glb|max:15360',
