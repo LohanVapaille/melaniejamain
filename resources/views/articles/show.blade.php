@@ -169,5 +169,8 @@
             {!! $lang === 'en' && $article->contenu_anglais ? $article->contenu_anglais : $article->contenu !!}
         </div>
 
+        {{-- Un article « À venir » n'a pas encore été lu : on garde le texte général --}}
+        @include('partials.suggestion', ['afterArticle' => (int) $article->is_published === 1])
+
     </section>
 @endsection

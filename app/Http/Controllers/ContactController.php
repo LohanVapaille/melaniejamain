@@ -3,25 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ContactMessage;
+use App\Support\MathCaptcha;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class ContactController extends Controller
 {
-    // En dessous de ce délai entre l'affichage et l'envoi, c'est un robot qui remplit le formulaire.
-    private const MIN_SECONDS_TO_FILL = 3;
-
-    /**
-     * Génère une nouvelle question anti-spam (addition) et mémorise sa réponse en session.
-     */
     public static function captchaQuestion(bool $en): string
     {
-        $a = random_int(1, 9);
-        $b = random_int(1, 9);
-        session(['contact_captcha' => ['answer' => $a + $b, 'shown_at' => time()]]);
-
-        return $en ? "How much is {$a} + {$b}?" : "Combien font {$a} + {$b} ?";
+        return MathCaptcha::question('contact_captcha', $en);
     }
 
     public function send(Request $request)
@@ -65,10 +56,8 @@ class ContactController extends Controller
             if ($validator->errors()->has('captcha')) {
                 return;
             }
-            if (!$captcha || (int) $request->input('captcha') !== $captcha['answer']) {
-                $validator->errors()->add('captcha', $en ? 'Wrong answer, please try again with the new question.' : 'Mauvaise réponse, réessayez avec la nouvelle question.');
-            } elseif (time() - $captcha['shown_at'] < self::MIN_SECONDS_TO_FILL) {
-                $validator->errors()->add('captcha', $en ? 'Sent too quickly, please try again.' : 'Envoi trop rapide, merci de réessayer.');
+            if ($error = MathCaptcha::error($captcha, $request->input('captcha'), $en)) {
+                $validator->errors()->add('captcha', $error);
             }
         });
 

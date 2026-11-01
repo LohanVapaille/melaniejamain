@@ -45,8 +45,14 @@ class AdminController extends Controller
         $info = DB::table('infos')->where('langue', 'fr')->first();
         $infoEn = DB::table('infos')->where('langue', 'en')->first();
 
-        // 4. Renvoie le tout à la vue
-        return view('admin.dashboard', compact('articles', 'articleToEdit', 'info', 'infoEn'));
+        // 4. Récupère les suggestions des visiteurs et celle à modifier
+        $suggestions = DB::table('suggestions')->orderBy('created_at', 'desc')->orderBy('id', 'desc')->get();
+        $suggestionToEdit = $request->has('edit_suggestion')
+            ? $suggestions->firstWhere('id', (int) $request->query('edit_suggestion'))
+            : null;
+
+        // 5. Renvoie le tout à la vue
+        return view('admin.dashboard', compact('articles', 'articleToEdit', 'info', 'infoEn', 'suggestions', 'suggestionToEdit'));
     }
     public function logout(Request $request)
     {

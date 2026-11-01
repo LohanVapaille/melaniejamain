@@ -6,8 +6,13 @@
     @php
         // Les deux formulaires partagent des noms de champs (ex. « nom ») : on ne reprend les anciennes saisies que du bon formulaire
         $oldForm = old('_form');
-        $initialTab = $oldForm === 'infos' ? 'textes' : 'articles';
+        $initialTab = match (true) {
+            $oldForm === 'infos' => 'textes',
+            $oldForm === 'suggestion', request()->has('edit_suggestion') => 'suggestions',
+            default => 'articles',
+        };
         $articleValue = fn($field, $default) => $oldForm === 'article' ? old($field) : $default;
+        $suggestionValue = fn($field) => $oldForm === 'suggestion' ? old($field) : $suggestionToEdit?->$field;
         $infoValue = fn($field, $isEn) => $oldForm === 'infos'
             ? old(($isEn ? 'en_' : '') . $field)
             : ($isEn ? ($infoEn->$field ?? '') : ($info->$field ?? ''));
@@ -123,6 +128,10 @@
             <button type="button" class="adm-tab" role="tab" id="tab-textes" data-tab="textes"
                 aria-controls="textes" aria-selected="{{ $initialTab === 'textes' ? 'true' : 'false' }}">
                 Textes du site
+            </button>
+            <button type="button" class="adm-tab" role="tab" id="tab-suggestions" data-tab="suggestions"
+                aria-controls="suggestions" aria-selected="{{ $initialTab === 'suggestions' ? 'true' : 'false' }}">
+                Suggestions <span class="adm-count">{{ $suggestions->count() }}</span>
             </button>
         </div>
 
@@ -424,6 +433,85 @@
                 </div>
             </form>
         </section>
+
+        {{-- ═══════════════ SUGGESTIONS ═══════════════ --}}
+        <section id="suggestions" class="adm-panel" role="tabpanel" aria-labelledby="tab-suggestions" data-panel="suggestions" @if($initialTab !== 'suggestions') hidden @endif>
+            <div class="adm-suggestions">
+
+                {{-- Liste des suggestions --}}
+                <div class="adm-card adm-suggestion-board">
+                    <div class="adm-card-head">
+                        <div>
+                            <h2 class="adm-card-title">Idées reçues</h2>
+                            <p class="adm-card-hint">Visibles uniquement ici, jamais sur le site.</p>
+                        </div>
+                        <a href="{{ route('admin.dashboard') }}#suggestion-editor" class="adm-btn adm-btn-primary adm-btn-sm">+ Ajouter</a>
+                    </div>
+
+                    <ul class="adm-suggestion-list">
+                        @forelse($suggestions as $suggestion)
+                            <li class="adm-suggestion {{ $suggestionToEdit?->id === $suggestion->id ? 'is-current' : '' }}">
+                                <p class="adm-suggestion-idea">{{ $suggestion->idea }}</p>
+                                <div class="adm-suggestion-foot">
+                                    <p class="adm-suggestion-meta">
+                                        @if($suggestion->email)
+                                            <a href="mailto:{{ $suggestion->email }}">{{ $suggestion->email }}</a>
+                                        @else
+                                            <span>Sans e-mail</span>
+                                        @endif
+                                        <span>{{ \Carbon\Carbon::parse($suggestion->created_at)->locale('fr')->isoFormat('D MMM YYYY') }}</span>
+                                    </p>
+                                    <div class="adm-suggestion-actions">
+                                        <a href="{{ route('admin.dashboard', ['edit_suggestion' => $suggestion->id]) }}#suggestion-editor" class="adm-btn adm-btn-ghost adm-btn-sm"
+                                            @if($suggestionToEdit?->id === $suggestion->id) aria-current="true" @endif>Modifier</a>
+                                        <form action="{{ route('admin.suggestions.delete', $suggestion->id) }}" method="POST"
+                                            onsubmit="return confirm(@js('Supprimer définitivement cette suggestion ? Cette action est irréversible.'));">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="adm-btn adm-btn-danger-ghost adm-btn-sm">Supprimer</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </li>
+                        @empty
+                            <li class="adm-empty">Aucune suggestion pour le moment. Celles des visiteurs apparaîtront ici.</li>
+                        @endforelse
+                    </ul>
+                </div>
+
+                {{-- Ajout / modification --}}
+                <form action="{{ route('admin.suggestions.store') }}" method="POST" id="suggestion-editor" class="adm-card adm-suggestion-editor" data-track-changes>
+                    @csrf
+                    <input type="hidden" name="_form" value="suggestion">
+                    <input type="hidden" name="id" value="{{ $suggestionToEdit?->id }}">
+
+                    <p class="adm-eyebrow">{{ $suggestionToEdit ? 'Modification' : 'Nouvelle suggestion' }}</p>
+                    <h2 class="adm-card-title adm-suggestion-editor-title">{{ $suggestionToEdit ? 'Modifier la suggestion' : 'Ajouter une suggestion' }}</h2>
+
+                    <div class="adm-field">
+                        <label for="suggestion-idea">Idée <span class="adm-required">obligatoire</span></label>
+                        <textarea id="suggestion-idea" name="idea" rows="6" required maxlength="2000" class="adm-input"
+                            placeholder="Ex. : qui est responsable des débris spatiaux ?" @error('idea') aria-invalid="true" @enderror>{{ $suggestionValue('idea') }}</textarea>
+                        @error('idea') <span class="adm-error">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="adm-field">
+                        <label for="suggestion-email">Adresse e-mail <span class="adm-required">facultative ici</span></label>
+                        <input type="email" id="suggestion-email" name="email" maxlength="255" class="adm-input"
+                            value="{{ $suggestionValue('email') }}" placeholder="nom@exemple.fr" @error('email') aria-invalid="true" @enderror>
+                        @error('email') <span class="adm-error">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="adm-suggestion-editor-actions">
+                        <span class="adm-unsaved" hidden>Modifications non enregistrées</span>
+                        @if($suggestionToEdit)
+                            <a href="{{ route('admin.dashboard') }}#suggestions" class="adm-btn adm-btn-ghost">Annuler</a>
+                        @endif
+                        <button type="submit" class="adm-btn adm-btn-primary">{{ $suggestionToEdit ? 'Enregistrer' : 'Ajouter' }}</button>
+                    </div>
+                </form>
+            </div>
+        </section>
     </div>
 
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
@@ -574,6 +662,22 @@
         .adm-trow-label small { display: block; margin-top: 3px; color: var(--adm-muted); font-size: 0.75rem; line-height: 1.4; }
         .adm-lang-code-mobile { display: none; }
 
+        /* Suggestions : liste + formulaire */
+        .adm-suggestions { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+        .adm-suggestion-editor { position: sticky; top: 90px; scroll-margin-top: 90px; }
+        .adm-suggestion-editor-title { margin-bottom: 18px; }
+        .adm-suggestion-editor-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+        .adm-suggestion-editor-actions .adm-unsaved { margin-right: auto; }
+        .adm-suggestion-list { list-style: none; margin: 0; padding: 0; }
+        .adm-suggestion { padding: 16px 14px; border-top: 1px solid var(--adm-line-soft); border-left: 3px solid transparent; }
+        .adm-suggestion.is-current { border-left-color: var(--adm-gold); background: rgba(201, 168, 76, 0.1); }
+        .adm-suggestion-idea { margin: 0 0 12px; color: #fff; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+        .adm-suggestion-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .adm-suggestion-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; color: var(--adm-muted); font-size: 0.78rem; overflow-wrap: anywhere; }
+        .adm-suggestion-meta a { color: var(--adm-info); }
+        .adm-suggestion-actions { display: flex; gap: 8px; }
+        .adm-suggestion-actions form { margin: 0; }
+
         /* Astre 3D (classes utilisées par admin3dpreview.js) */
         /* Légende flottante : elle reste dans la carte au lieu de chevaucher la bordure du fieldset */
         .space-editor > legend { float: left; width: 100%; margin-bottom: 18px; }
@@ -638,6 +742,8 @@
         /* Responsive */
         @media (max-width: 1000px) {
             .adm-articles { grid-template-columns: 1fr; }
+            .adm-suggestions { grid-template-columns: 1fr; }
+            .adm-suggestion-editor { position: static; }
             .adm-sidebar { position: static; }
             .adm-article-list { max-height: 320px; }
             .adm-article-delete button { opacity: 1; }
@@ -649,6 +755,8 @@
         @media (max-width: 640px) {
             .adm { padding: 0 12px; }
             .adm-title { font-size: 1.9rem; }
+            .adm-tabs { overflow-x: auto; }
+            .adm-tab { flex: none; margin-bottom: 0; padding: 10px; font-size: 0.85rem; white-space: nowrap; }
             .adm-card { padding: 16px; }
             .adm-grid-2 { grid-template-columns: 1fr; }
             .adm-trow { grid-template-columns: 1fr; gap: 10px; }
@@ -671,7 +779,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
-            /* ── Onglets principaux (Articles / Textes du site) ── */
+            /* ── Onglets principaux (Articles / Textes du site / Suggestions) ── */
             const tabs = document.querySelectorAll('.adm-tab');
             function showTab(name, updateHash = true) {
                 tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === name)));
@@ -680,6 +788,7 @@
             }
             tabs.forEach(tab => tab.addEventListener('click', () => showTab(tab.dataset.tab)));
             if (location.hash === '#textes') showTab('textes', false);
+            else if (location.hash === '#suggestions' || location.hash === '#suggestion-editor') showTab('suggestions', false);
             else if (location.hash === '#articles' || location.hash === '#editeur') showTab('articles', false);
 
             /* ── Onglets de langue de l'article (FR / EN) ── */
