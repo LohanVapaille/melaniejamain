@@ -29,19 +29,60 @@ class Seo
     }
 
     /**
-     * Segment d'URL d'un article, ex. « 2-qui-possede-la-lune ».
-     * L'identifiant reste en tête : changer le titre change l'URL sans casser l'ancienne (redirection 301).
+     * Segment d'URL d'un article, ex. « qui-possede-la-lune ».
+     * L'identifiant ne sert que si l'article n'a pas de slug (insertion directe en base, seeder).
      */
     public static function articleKey(object $article, string $lang): string
     {
-        // Str::slug supprime les apostrophes : « l'espace » donnerait « lespace »
-        $slug = Str::slug(str_replace(["'", '’'], ' ', self::articleTitle($article, $lang)));
+        $slug = $lang === 'en' && !empty($article->slug_anglais) ? $article->slug_anglais : ($article->slug ?? null);
 
-        if (strlen($slug) > self::SLUG_LENGTH) {
-            $slug = preg_replace('/-[^-]*$/', '', substr($slug, 0, self::SLUG_LENGTH));
+        return $slug ?: (string) $article->id;
+    }
+
+    /**
+     * Slugs à enregistrer pour un article. Ils suivent le titre jusqu'à la publication,
+     * puis ne bougent plus : une URL publiée doit rester valable même si le titre change.
+     */
+    public static function articleSlugs(string $title, ?string $englishTitle, ?object $current, ?int $id = null): array
+    {
+        $id ??= $current?->id;
+        $frozen = $current && (int) $current->is_published === 1;
+
+        return [
+            'slug' => $frozen && $current->slug ? $current->slug : self::uniqueSlug($title, $id),
+            'slug_anglais' => match (true) {
+                blank($englishTitle) => null,
+                $frozen && (bool) $current->slug_anglais => $current->slug_anglais,
+                default => self::uniqueSlug($englishTitle, $id),
+            },
+        ];
+    }
+
+    private static function uniqueSlug(string $title, ?int $ignoreId): string
+    {
+        // Str::slug supprime les apostrophes : « l'espace » donnerait « lespace »
+        $base = Str::slug(str_replace(["'", '’'], ' ', $title));
+
+        if (strlen($base) > self::SLUG_LENGTH) {
+            $base = preg_replace('/-[^-]*$/', '', substr($base, 0, self::SLUG_LENGTH));
         }
 
-        return rtrim($article->id . '-' . $slug, '-');
+        $base = $base ?: 'article';
+        $slug = $base;
+
+        for ($suffix = 2; self::slugIsTaken($slug, $ignoreId); $suffix++) {
+            $slug = "$base-$suffix";
+        }
+
+        return $slug;
+    }
+
+    private static function slugIsTaken(string $slug, ?int $ignoreId): bool
+    {
+        return DB::table('articles')
+            ->when($ignoreId, fn($query) => $query->where('id', '!=', $ignoreId))
+            ->where(fn($query) => $query->where('slug', $slug)->orWhere('slug_anglais', $slug))
+            ->exists();
     }
 
     public static function articleTitle(object $article, string $lang): string

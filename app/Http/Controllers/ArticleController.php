@@ -38,14 +38,19 @@ class ArticleController extends Controller
     {
         $lang = session('lang', 'fr');
         $key = $article;
-        $article = DB::table('articles')->where('id', (int) $key)->first();
+        $article = DB::table('articles')->where('slug', $key)->orWhere('slug_anglais', $key)->first();
+
+        // Anciennes URL avec identifiant (/articles/10)
+        if (!$article && ctype_digit($key)) {
+            $article = DB::table('articles')->where('id', (int) $key)->first();
+        }
 
         // Si l'article n'existe pas OU s'il est en brouillon, on bloque avec une 404
         if (!$article || !$article->is_published) {
             abort(404, 'Article non publié ou introuvable');
         }
 
-        // Anciennes URL (/articles/2) ou titre modifié : on envoie vers l'URL à jour
+        // Ancienne URL ou slug de l'autre langue : on envoie vers l'URL à jour
         if ($key !== Seo::articleKey($article, $lang)) {
             return redirect()->to(Seo::articleUrl($article, $lang), 301);
         }
@@ -105,10 +110,16 @@ class ArticleController extends Controller
 
         $visualModel = $request->input('visual_model', 'planet');
         $visualColor = $request->input('visual_color') ?: null;
+        $slugs = Seo::articleSlugs(
+            $request->input('nom'),
+            $request->input('nom_anglais'),
+            $id ? DB::table('articles')->where('id', $id)->first() : null
+        );
 
         if ($id) {
             // MODE ÉDITION
             DB::table('articles')->where('id', $id)->update([
+                ...$slugs,
                 'nom' => $request->input('nom'),
                 'contenu' => $request->input('contenu'),
                 'nom_anglais' => $request->input('nom_anglais'),
@@ -123,6 +134,7 @@ class ArticleController extends Controller
         } else {
             // MODE CRÉATION
             $id = DB::table('articles')->insertGetId([
+                ...$slugs,
                 'nom' => $request->input('nom'),
                 'contenu' => $request->input('contenu'),
                 'nom_anglais' => $request->input('nom_anglais'),

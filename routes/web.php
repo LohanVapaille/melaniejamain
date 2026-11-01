@@ -14,7 +14,7 @@ foreach (['fr' => '', 'en' => 'en'] as $lang => $prefix) {
     Route::prefix($prefix)->name("$lang.")->middleware(SetLanguage::class . ":$lang")->group(function () {
         Route::get('/', [ArticleController::class, 'home'])->name('home');
         Route::get('/articles/{article}', [ArticleController::class, 'show'])
-            ->where('article', '[0-9]+(?:-[a-z0-9-]+)?')
+            ->where('article', '[a-z0-9-]+')
             ->name('articles.show');
     });
 }
