@@ -5,23 +5,22 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AdminController; // <-- LIGNE AJOUTÉE ICI
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\SuggestionController;
+use App\Http\Middleware\SetLanguage;
 
-Route::get('/', function () {
-    // MODIFICATION : On prend l'état 1 (publié) ET l'état 2 (à venir)
-    $articles = DB::table('articles')
-        ->whereIn('is_published', [1, 2])
-        ->orderBy('created_at', 'desc')
-        ->get();
+// Une URL par langue : français à la racine, anglais sous /en
+foreach (['fr' => '', 'en' => 'en'] as $lang => $prefix) {
+    Route::prefix($prefix)->name("$lang.")->middleware(SetLanguage::class . ":$lang")->group(function () {
+        Route::get('/', [ArticleController::class, 'home'])->name('home');
+        Route::get('/articles/{article}', [ArticleController::class, 'show'])
+            ->where('article', '[0-9]+(?:-[a-z0-9-]+)?')
+            ->name('articles.show');
+    });
+}
 
-    $lang = session('lang', 'fr');
-    $info = DB::table('infos')->where('langue', $lang)->first() ?? DB::table('infos')->where('langue', 'fr')->first();
-
-    $captchaQuestion = ContactController::captchaQuestion($lang === 'en');
-    $suggestionCaptcha = SuggestionController::captchaQuestion($lang === 'en');
-
-    return view('welcome', compact('articles', 'info', 'lang', 'captchaQuestion', 'suggestionCaptcha'));
-});
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots']);
 
 // Formulaire de contact : 6 envois maximum par tranche de 10 minutes et par visiteur
 Route::post('/contact', [ContactController::class, 'send'])->middleware('throttle:6,10')->name('contact.send');
@@ -29,26 +28,12 @@ Route::post('/contact', [ContactController::class, 'send'])->middleware('throttl
 // Suggestions de sujets : même limite, avec un compteur séparé de celui du contact
 Route::post('/suggestions', [SuggestionController::class, 'send'])->middleware('throttle:6,10,suggestions')->name('suggestions.send');
 
+// Sélecteur de langue des pages d'administration, qui n'ont pas d'URL par langue
 Route::get('/langue/{lang}', function ($lang) {
     abort_unless(in_array($lang, ['fr', 'en'], true), 404);
     session(['lang' => $lang]);
     return redirect()->to(url()->previous('/') ?: url('/'));
 })->name('language.switch');
-
-Route::get('/articles/{id}', function ($id) {
-    $article = DB::table('articles')->where('id', $id)->first();
-
-    // Si l'article n'existe pas OU s'il est en brouillon, on bloque avec une 404
-    if (!$article || !$article->is_published) {
-        abort(404, 'Article non publié ou introuvable');
-    }
-
-    $lang = session('lang', 'fr');
-    $info = DB::table('infos')->where('langue', $lang)->first() ?? DB::table('infos')->where('langue', 'fr')->first();
-    $suggestionCaptcha = SuggestionController::captchaQuestion($lang === 'en');
-
-    return view('articles.show', compact('article', 'lang', 'info', 'suggestionCaptcha'));
-})->name('articles.show');
 
 
 // Routes d'authentification de l'admin

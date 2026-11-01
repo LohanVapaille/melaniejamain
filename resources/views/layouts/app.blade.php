@@ -1,10 +1,12 @@
 @php
     $lang = session('lang', 'fr');
     $en = $lang === 'en';
+    $homeUrl = \App\Support\Seo::homeUrl($lang);
+    $languageUrl = fn($target) => $seo['languages'][$target] ?? route('language.switch', $target);
     $visualisationArticles = isset($articles)
         ? $articles
         : DB::table('articles')->whereIn('is_published', [1, 2])->orderBy('created_at', 'desc')->get();
-    $visualisationData = $visualisationArticles->reject(fn($article) => ($article->visual_model ?? null) === 'none')->map(function ($article) use ($en) {
+    $visualisationData = $visualisationArticles->reject(fn($article) => ($article->visual_model ?? null) === 'none')->map(function ($article) use ($en, $lang) {
         $title = $en ? ($article->nom_anglais ?: $article->nom) : $article->nom;
         $content = $en ? ($article->contenu_anglais ?: $article->contenu) : $article->contenu;
         $content = preg_replace('/<\s*br\s*\/?>|<\s*\/\s*(p|div|li|h[1-6])\s*>/i', ' ', $content);
@@ -16,7 +18,7 @@
                 trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($content), ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                 180
             ),
-            'url' => route('articles.show', $article->id),
+            'url' => \App\Support\Seo::articleUrl($article, $lang),
             'upcoming' => (int) $article->is_published === 2,
             'visualModel' => $article->visual_model ?? 'planet',
             'visualColor' => $article->visual_color ?? null,
@@ -25,14 +27,20 @@
     })->values()->all();
 @endphp
 <!DOCTYPE html>
-<html lang="{{ session('lang', 'fr') }}">
+<html lang="{{ $seo['contentLang'] ?? $lang }}">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="draco-decoder-path" content="{{ asset('draco') }}/" />
-    <title>Mélanie Jamain </title>
-    <link rel="icon" type="image/png" href="{{ asset('img/logo.svg') }}" />
+    <title>@yield('title', config('app.name'))</title>
+    @include('partials.seo')
+    <meta name="theme-color" content="#07092e" />
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="{{ asset('img/logo.svg') }}" />
+    <link rel="apple-touch-icon" href="{{ asset('img/apple-touch-icon.png') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
         href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap"
         rel="stylesheet" />
@@ -210,16 +218,16 @@
     <!-- La navigation commune -->
     <nav>
         <div class="nav-inner">
-            <a href="{{ url('/') }}#accueil" class="nav-logo">
-                <img class="logo" src="{{ asset('img/logo.svg') }}" alt="Retour à l'accueil">
+            <a href="{{ $homeUrl }}#accueil" class="nav-logo">
+                <img class="logo" src="{{ asset('img/logo.svg') }}" alt="{{ $en ? 'Mélanie Jamain — home' : 'Mélanie Jamain — accueil' }}">
             </a>
 
             <div class="mobile-menu-style">
                 <div class="nav-menu">
                     <ul class="nav-links" id="nav-links">
-                        <li><a href="{{ url('/') }}#apropos">{{ $en ? 'About' : 'À propos' }}</a></li>
-                        <li><a href="{{ url('/') }}#articles">Articles</a></li>
-                        <li><a href="{{ url('/') }}#contact">Contact</a></li>
+                        <li><a href="{{ $homeUrl }}#apropos">{{ $en ? 'About' : 'À propos' }}</a></li>
+                        <li><a href="{{ $homeUrl }}#articles">Articles</a></li>
+                        <li><a href="{{ $homeUrl }}#contact">Contact</a></li>
                         <button class="visualisation-trigger visualisation-open only-phone" type="button">
                             <span aria-hidden="true">✦</span>
                             {{ $en ? '3D experience' : 'Visualisation 3D' }}
@@ -227,9 +235,9 @@
                     </ul>
 
                     <div class="language-toggle" aria-label="Choose language">
-                        <a href="{{ route('language.switch', 'fr') }}"
+                        <a href="{{ $languageUrl('fr') }}" hreflang="fr"
                             class="{{ session('lang', 'fr') === 'fr' ? 'active' : '' }}">FR</a><span></span>
-                        <a href="{{ route('language.switch', 'en') }}"
+                        <a href="{{ $languageUrl('en') }}" hreflang="en"
                             class="{{ session('lang', 'fr') === 'en' ? 'active' : '' }}">EN</a>
                     </div>
                     <button class="visualisation-trigger visualisation-open only-desktop" type="button">
@@ -281,12 +289,14 @@
     <script type="application/json" id="visualisation-articles">@json($visualisationData)</script>
 
 
-    @yield('content')
+    <main>
+        @yield('content')
+    </main>
 
     <!-- Le footer commun -->
     <footer>
         <p>© 2026 <span>Mélanie Jamain</span> </p>
-        <p><a href="{{ url('/admin/dashboard') }}">{{ $en ? 'Admin panel' : 'Espace administrateur' }}</a></p>
+        <p><a href="{{ url('/admin/dashboard') }}" rel="nofollow">{{ $en ? 'Admin panel' : 'Espace administrateur' }}</a></p>
         <p class="footer-separator"></p>
         <p class="credit">{{ $en ? 'This site was created by' : 'Ce site a été réalisé par' }} <a
                 href="https://lovaweb.lohanvapaille.fr" target="_blank" rel="noopener noreferrer">Lohan

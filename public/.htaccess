@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # Une seule adresse pour Google : www redirige vers le domaine principal
+    RewriteCond %{HTTP_HOST} ^www\.melaniejamain\.fr$ [NC]
+    RewriteCond %{THE_REQUEST} ^\S+\s(\S+)
+    RewriteRule ^ https://melaniejamain.fr%1 [R=301,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -22,4 +27,23 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Vitesse de chargement (Core Web Vitals) : compression des fichiers texte
+<IfModule mod_deflate.c>
+    <IfModule mod_filter.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/xml application/javascript text/javascript application/json application/ld+json image/svg+xml application/wasm
+    </IfModule>
+</IfModule>
+
+# Vitesse de chargement : les fichiers de build ont un nom unique, ils peuvent rester longtemps en cache
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType application/wasm "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 month"
 </IfModule>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -12,21 +13,54 @@ class ArticleController extends Controller
     // L'article n'apparaît pas dans la visualisation 3D
     public const NO_VISUAL = 'none';
 
+    public function home()
+    {
+        // MODIFICATION : On prend l'état 1 (publié) ET l'état 2 (à venir)
+        $articles = DB::table('articles')
+            ->whereIn('is_published', [1, 2])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $lang = session('lang', 'fr');
+        $info = DB::table('infos')->where('langue', $lang)->first() ?? DB::table('infos')->where('langue', 'fr')->first();
+
+        $captchaQuestion = ContactController::captchaQuestion($lang === 'en');
+        $suggestionCaptcha = SuggestionController::captchaQuestion($lang === 'en');
+        $seo = Seo::forHome($info, $lang);
+
+        return view('welcome', compact('articles', 'info', 'lang', 'captchaQuestion', 'suggestionCaptcha', 'seo'));
+    }
+
     /**
      * Afficher le détail d'un article unique
      */
-    public function show($id)
+    public function show(string $article)
     {
-        // On va chercher l'article dans la table 'articles' via son ID
-        // Si l'id n'existe pas, firstOrFail() renverra une erreur 404 propre
-        $article = DB::table('articles')->where('id', $id)->first();
+        $lang = session('lang', 'fr');
+        $key = $article;
+        $article = DB::table('articles')->where('id', (int) $key)->first();
 
-        if (!$article) {
-            abort(404, 'Article non trouvé');
+        // Si l'article n'existe pas OU s'il est en brouillon, on bloque avec une 404
+        if (!$article || !$article->is_published) {
+            abort(404, 'Article non publié ou introuvable');
         }
 
-        // On envoie l'article à la vue 'articles.show'
-        return view('articles.show', compact('article'));
+        // Anciennes URL (/articles/2) ou titre modifié : on envoie vers l'URL à jour
+        if ($key !== Seo::articleKey($article, $lang)) {
+            return redirect()->to(Seo::articleUrl($article, $lang), 301);
+        }
+
+        $info = DB::table('infos')->where('langue', $lang)->first() ?? DB::table('infos')->where('langue', 'fr')->first();
+        $suggestionCaptcha = SuggestionController::captchaQuestion($lang === 'en');
+        $seo = Seo::forArticle($article, $info, $lang);
+        $relatedArticles = DB::table('articles')
+            ->where('is_published', 1)
+            ->where('id', '!=', $article->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(3)
+            ->get();
+
+        return view('articles.show', compact('article', 'lang', 'info', 'suggestionCaptcha', 'seo', 'relatedArticles'));
     }
 
     // N'oublie pas d'importer Request si ce n'est pas fait : use Illuminate\Http\Request;

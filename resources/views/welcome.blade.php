@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $info->hero_h1 . ' — Accueil')
+@section('title', $seo['title'])
 
 @section('content')
     @php $en = $lang === 'en'; $text = fn($key) => $info->$key ?: DB::table('infos')->where('langue', 'fr')->value($key); @endphp
@@ -29,7 +29,7 @@
                     $phrases = preg_split('/(?<=[.!?])\s+/', $textePropre, -1, PREG_SPLIT_NO_EMPTY);
                     $deuxPremieresPhrases = implode(' ', array_slice($phrases, 0, 2));
                 @endphp
-                <a href="{{ route('articles.show', $dernierArticle->id) }}" class="hero-article-preview">
+                <a href="{{ \App\Support\Seo::articleUrl($dernierArticle, $lang) }}" class="hero-article-preview">
                     <span class="preview-label">{{ $en ? 'Preview of the latest article' : 'Aperçu du dernier article' }}</span>
                     <h3 class="preview-title">{{ $articleName }}</h3>
                     <p class="preview-text">{{ $deuxPremieresPhrases }}</p>
@@ -47,15 +47,15 @@
                 </div>
                 <div class="about-pillars">
                     <div class="pillar">
-                    <p class="pillar-title">{{ $text('about_pillar_title1') }}</p>
+                    <h3 class="pillar-title">{{ $text('about_pillar_title1') }}</h3>
                         <p class="pillar-text">{{ $text('about_pillar_content1') }}</p>
                     </div>
                     <div class="pillar">
-                    <p class="pillar-title">{{ $text('about_pillar_title2') }}</p>
+                    <h3 class="pillar-title">{{ $text('about_pillar_title2') }}</h3>
                         <p class="pillar-text">{{ $text('about_pillar_content2') }}</p>
                     </div>
                     <div class="pillar">
-                    <p class="pillar-title">{{ $text('about_pillar_title3') }}</p>
+                    <h3 class="pillar-title">{{ $text('about_pillar_title3') }}</h3>
                         <p class="pillar-text">{{ $text('about_pillar_content3') }}</p>
                     </div>
                 </div>
@@ -69,20 +69,20 @@
             <div class="articles-list" id="articles-container">
                 @foreach($articles as $index => $article)
                     {{-- On cache par défaut tous les articles au-delà du 3ème --}}
-                    <a href="{{ route('articles.show', $article->id) }}"
+                    <a href="{{ \App\Support\Seo::articleUrl($article, $lang) }}"
                         class="article-item {{ $index >= 3 ? 'article-hidden' : '' }}"
                         style="text-decoration: none; color: inherit; display: {{ $index >= 3 ? 'none' : 'flex' }};">
                         <span class="article-date" style="{{ $article->is_published == 2 ? 'color: #87cefa;' : '' }}">
                             @if($article->is_published == 2)
                                 {{ $en ? 'Coming soon' : 'À venir' }}
                             @else
-                                {{ \Carbon\Carbon::parse($article->created_at)->locale('fr')->isoFormat('DD MMM YYYY') }}
+                                {{ \Carbon\Carbon::parse($article->created_at)->locale($lang)->isoFormat('DD MMM YYYY') }}
                             @endif
                         </span>
                         <div>
                             <h3 class="article-title">{{ $en && $article->nom_anglais ? $article->nom_anglais : $article->nom }}</h3>
                             <p class="article-excerpt">
-                                {{ Str::limit(html_entity_decode(strip_tags($en && $article->contenu_anglais ? $article->contenu_anglais : $article->contenu)), 150, '...') }}
+                                {{ Str::limit(\App\Support\Seo::plainText($en && $article->contenu_anglais ? $article->contenu_anglais : $article->contenu), 150, '...') }}
                             </p>
                             <span class="article-tag">{{ $en ? 'Read more' : 'Lire la suite' }}</span>
                         </div>
@@ -179,7 +179,7 @@
                     </a>
                 @endif
                 @if($info->linkedin)
-                    <a href="{{ $info->linkedin }}" target="_blank" class="contact-link">
+                    <a href="{{ $info->linkedin }}" target="_blank" rel="me noopener" class="contact-link">
                         <div>
                             <span class="contact-link-label">LinkedIn</span>
                             {{ $info->prenom }} {{ $info->nom }}

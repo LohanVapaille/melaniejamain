@@ -198,7 +198,7 @@
                             @endif
                         </div>
                         @if($articleToEdit && $articleToEdit->is_published)
-                            <a href="{{ route('articles.show', $articleToEdit->id) }}" target="_blank" rel="noopener" class="adm-btn adm-btn-ghost adm-btn-sm">Voir sur le site ↗</a>
+                            <a href="{{ \App\Support\Seo::articleUrl($articleToEdit, 'fr') }}" target="_blank" rel="noopener" class="adm-btn adm-btn-ghost adm-btn-sm">Voir sur le site ↗</a>
                         @endif
                     </div>
 

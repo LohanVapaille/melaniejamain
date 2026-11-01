@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $lang === 'en' && $article->nom_anglais ? $article->nom_anglais : $article->nom)
+@section('title', $seo['title'])
 
 @section('content')
 
@@ -146,28 +146,59 @@
         .back-link:hover {
             color: var(--gold, #d4af37);
         }
+
+        .related-articles {
+            margin-top: 60px;
+        }
     </style>
     <section class="article-unique">
 
         <!-- Bouton Retour -->
-        <a href=" {{ url('/') }}#articles"
+        <a href="{{ \App\Support\Seo::homeUrl($lang) }}#articles"
             style="color: #a0aec0; text-decoration: none; font-size: 0.9rem; display: inline-block; mb-4: 20px;">
             {{ $lang === 'en' ? '← Back to articles' : '← Retour aux articles' }}
         </a>
 
-        <!-- Titre de l'article -->
-        <h1 class="hero-title" style="font-size: 2.5rem; margin-top: 20px; line-height: 1.2;">
-            {{ $lang === 'en' && $article->nom_anglais ? $article->nom_anglais : $article->nom }}
-        </h1>
+        <article lang="{{ $seo['contentLang'] }}">
+            <!-- Titre de l'article -->
+            <h1 class="hero-title" style="font-size: 2.5rem; margin-top: 20px; line-height: 1.2;">
+                {{ \App\Support\Seo::articleTitle($article, $lang) }}
+            </h1>
 
-        <p class="article-date" style="color: #718096; font-style: italic; margin: 15px 0 40px 0;">
-            Publié le {{ \Carbon\Carbon::parse($article->created_at)->format('d/m/Y') }}
-        </p>
+            <p class="article-date" style="color: #718096; font-style: italic; margin: 15px 0 40px 0; width: auto;">
+                @if((int) $article->is_published === 2)
+                    {{ $lang === 'en' ? 'Coming soon' : 'À venir' }}
+                @else
+                    {{ $lang === 'en' ? 'Published on' : 'Publié le' }}
+                    <time datetime="{{ $seo['published'] }}">{{ \Carbon\Carbon::parse($article->created_at)->format($lang === 'en' ? 'm/d/Y' : 'd/m/Y') }}</time>
+                    {{ $lang === 'en' ? 'by' : 'par' }} <span>{{ $seo['author'] }}</span>
+                @endif
+            </p>
 
-        <!-- Corps de l'article enveloppé dans la classe Quill -->
-        <div class="ql-editor">
-            {!! $lang === 'en' && $article->contenu_anglais ? $article->contenu_anglais : $article->contenu !!}
-        </div>
+            <!-- Corps de l'article enveloppé dans la classe Quill -->
+            <div class="ql-editor">
+                {!! \App\Support\Seo::articleContent($article, $lang) !!}
+            </div>
+        </article>
+
+        @if($relatedArticles->isNotEmpty())
+            <div class="related-articles">
+                <h2 class="section-title">{{ $lang === 'en' ? 'Keep reading' : 'À lire aussi' }}</h2>
+                <div class="articles-list">
+                    @foreach($relatedArticles as $related)
+                        <a href="{{ \App\Support\Seo::articleUrl($related, $lang) }}" class="article-item"
+                            style="text-decoration: none; color: inherit; display: flex;">
+                            <span class="article-date">{{ \Carbon\Carbon::parse($related->created_at)->locale($lang)->isoFormat('DD MMM YYYY') }}</span>
+                            <div>
+                                <h3 class="article-title">{{ \App\Support\Seo::articleTitle($related, $lang) }}</h3>
+                                <p class="article-excerpt">{{ Str::limit(\App\Support\Seo::plainText(\App\Support\Seo::articleContent($related, $lang)), 150, '...') }}</p>
+                                <span class="article-tag">{{ $lang === 'en' ? 'Read more' : 'Lire la suite' }}</span>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
 
         {{-- Un article « À venir » n'a pas encore été lu : on garde le texte général --}}
         @include('partials.suggestion', ['afterArticle' => (int) $article->is_published === 1])

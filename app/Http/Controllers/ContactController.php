@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\ContactMessage;
 use App\Support\MathCaptcha;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -114,7 +115,7 @@ class ContactController extends Controller
             ], $status ?? ($ok ? 200 : 422));
         }
 
-        $redirect = redirect()->to(url('/') . '#contact');
+        $redirect = redirect()->to(Seo::homeUrl(session('lang', 'fr')) . '#contact');
 
         return $ok
             ? $redirect->with('contact_success', $message)
