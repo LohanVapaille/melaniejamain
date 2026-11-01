@@ -1,0 +1,4 @@
+deployment:
+  tasks:
+    - export DeploymentPath=/home/vapaille/melaniejamain.fr_repogitconnected
+    - /bin/cp -R * $DeploymentPath
