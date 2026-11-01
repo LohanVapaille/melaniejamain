@@ -22,7 +22,7 @@ class ContactMessage extends Mailable
         return new Envelope(
             // « Répondre » dans la messagerie écrit directement au visiteur.
             replyTo: [new Address($this->senderEmail)],
-            subject: '[Site] ' . $this->contactSubject,
+            subject: 'Du droit aux étoiles ' . $this->contactSubject,
         );
     }
 

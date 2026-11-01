@@ -104,6 +104,8 @@
             @endif
         </section>
 
+        @include('partials.suggestion', ['afterArticle' => false])
+
         <section id="contact">
             <p class="section-label">{{ $en ? 'Contact' : 'Contact' }}</p>
             <h2 class="section-title">{{ $text('section_contact_title') }}</h2>

@@ -735,6 +735,15 @@ section {
         border-color: var(--gold);
     }
 
+    /* Le pré-remplissage du navigateur impose un fond clair : on garde le thème sombre */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+        -webkit-text-fill-color: var(--white);
+        caret-color: var(--white);
+        box-shadow: 0 0 0 1000px var(--deep) inset;
+    }
+
     [aria-invalid="true"] {
         border-color: #f08a8a;
     }
@@ -872,6 +881,160 @@ section {
 
     .contact-form {
         padding: 20px;
+    }
+}
+
+/* ── SUGGESTIONS DE SUJETS ── */
+.suggestion {
+    position: relative;
+    z-index: 1;
+    scroll-margin-top: 70px;
+}
+
+.suggestion-card {
+    padding: 40px 28px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    text-align: center;
+}
+
+.suggestion-label {
+    margin-bottom: 14px;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.suggestion-title {
+    margin-bottom: 10px;
+    font-family: "Cormorant Garamond", serif;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    font-weight: 300;
+    line-height: 1.2;
+    color: var(--white);
+}
+
+.suggestion-text {
+    margin-bottom: 26px;
+    font-family: "Cormorant Garamond", serif;
+    font-size: 1.2rem;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+.suggestion-cta {
+    display: inline-block;
+    padding: 13px 26px;
+    border: 1px solid var(--gold);
+    border-radius: 2px;
+    background: var(--gold);
+    color: var(--navy);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    list-style: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+
+    &::-webkit-details-marker {
+        display: none;
+    }
+
+    &:hover {
+        background: var(--gold-lt);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--gold-lt);
+        outline-offset: 3px;
+    }
+}
+
+.suggestion-cta-close {
+    display: none;
+}
+
+/* Une fois le formulaire ouvert, le bouton passe au second plan */
+.suggestion-details[open] > .suggestion-cta {
+    background: transparent;
+    color: var(--gold);
+
+    &:hover {
+        color: var(--gold-lt);
+    }
+
+    .suggestion-cta-open {
+        display: none;
+    }
+
+    .suggestion-cta-close {
+        display: inline;
+    }
+}
+
+.suggestion-form {
+    max-width: 640px;
+    margin: 32px auto 0;
+    text-align: left;
+    animation: suggestion-reveal 0.25s ease-out;
+
+    /* Cible d'ancre : le bandeau de navigation fixe ne doit pas recouvrir le champ */
+    input,
+    textarea {
+        scroll-margin-top: 110px;
+    }
+
+    .contact-field textarea {
+        min-height: 110px;
+    }
+
+    .contact-field label strong {
+        white-space: nowrap;
+    }
+
+    /* Même hauteur et même alignement que le champ anti-spam voisin */
+    .contact-submit {
+        margin-top: 28px;
+        padding-block: 15px;
+    }
+}
+
+.suggestion-privacy {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+@keyframes suggestion-reveal {
+    from {
+        transform: translateY(-6px);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .suggestion-form {
+        animation: none;
+    }
+}
+
+@media (max-width: 760px) {
+    .suggestion-card {
+        padding: 28px 18px;
+    }
+
+    .suggestion-cta,
+    .suggestion-form .contact-submit {
+        width: 100%;
+    }
+
+    .suggestion-form .contact-submit {
+        margin-top: 0;
     }
 }
 
